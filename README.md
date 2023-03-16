@@ -11,7 +11,7 @@
 # Credit
 Astro#3289 **for code and allowing me to release it**
 
-# Credit
+# 
 Muzzy#8363 **used some of his code and readme** (https://github.com/FiveOPZ/qb-panicbutton)
 
 # Dependencies:
