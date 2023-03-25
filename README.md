@@ -8,6 +8,8 @@
 
 * Support will be limited 
 
+* Has support for ox resources (ox_inventory/ox_lib) and qb resources (qb-inventory/lj-inventory)
+
 # Credit
 Astro#3289 **for code and allowing me to release it**
 
@@ -18,17 +20,13 @@ Muzzy#8363 **used some of his code and readme** (https://github.com/FiveOPZ/qb-p
 
 [qb-core](https://github.com/qbcore-framework/qb-core)
 
-[ox_lib](https://github.com/overextended/ox_lib)
-
-[ox_inventory](https://github.com/overextended/ox_inventory)
-
 [qb-policejob](https://github.com/qbcore-framework/qb-policejob)
 
 [ps-dispatch](https://github.com/Project-Sloth/ps-dispatch)
 
 # Installation
 
-**Make sure you have the dependencies above installed**
+# OX Installation
 
 **goto ps-dispatch/client/cl_main.lua and add**
 
@@ -49,36 +47,18 @@ RegisterNetEvent("ps-dispatch:client:TriggerPanicButton", function()
 			}, {}, {}, {}, function() 
 				PressedPanicButton = true
 				PlayerData = QBCore.Functions.GetPlayerData()
-				if IsDowned() then
-					if lib.callback.await("ps-dispatch:server:PressPanicButton") then 
-						-- QBCore.Functions.Notify("Panic Button Activated", "success")
-						if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then 
-							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-							exports['ps-dispatch']:OfficerDown()
-							PressedPanicButton = false
-						elseif (PlayerData.job.name == "ambulance") then
-							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-							exports['ps-dispatch']:EMSDown()
-							PressedPanicButton = false
-						end
-					else
+				if lib.callback.await("ps-dispatch:server:PressPanicButton") then 
+					if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
+						TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+						exports['ps-dispatch']:OfficerDown2()
+						PressedPanicButton = false
+					elseif (PlayerData.job.name == "ambulance") then
+						TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+						exports['ps-dispatch']:EMSDown2()
 						PressedPanicButton = false
 					end
 				else
-					if lib.callback.await("ps-dispatch:server:PressPanicButton") then 
-						-- QBCore.Functions.Notify("Panic Button Activated", "success")
-						if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
-							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-							exports['ps-dispatch']:OfficerDown2()
-							PressedPanicButton = false
-						elseif (PlayerData.job.name == "ambulance") then
-							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-							exports['ps-dispatch']:EMSDown2()
-							PressedPanicButton = false
-						end
-					else
-						PressedPanicButton = false
-					end
+					PressedPanicButton = false
 				end
 			end, function()
 				QBCore.Functions.Notify("Panic Button Canceled", "error")
@@ -99,50 +79,208 @@ function IsDowned()
 end
 
 AddEventHandler('gameEventTriggered', function(event, data)
-    if event ~= "CEventNetworkEntityDamage" then return end
-    local victim, attacker, victimDied, weapon = data[1], data[2], data[4], data[7]
-    if not IsEntityAPed(victim) or not victimDied or NetworkGetPlayerIndexFromPed(victim) ~= cache.playerId or not IsEntityDead(cache.ped) then return end
-    if not InLaststand then
-		TimeToAlert = 30
-		SentNotify = false
-        StartLastStand()
-		if not exports["ps-dispatch"]:UsedPanicButton() then 
-			while true do 
-				Wait(1000)
+    if event == "CEventNetworkEntityDamage" then
+        local victim, attacker, victimDied, weapon = data[1], data[2], data[4], data[7]
+        if not IsEntityAPed(victim) then return end
+        if victimDied and NetworkGetPlayerIndexFromPed(victim) == PlayerId() and IsEntityDead(PlayerPedId()) then
+            if not InLaststand then
+                SetLaststand(true)
+				TimeToAlert = 30
+				SentNotify = false
 				PlayerData = QBCore.Functions.GetPlayerData()
-				if IsDowned() then
-					if TimeToAlert == 0 then return end
-					if TimeToAlert ~= 0 then TimeToAlert = TimeToAlert - 1 end
-					if not SentNotify then QBCore.Functions.Notify("Vital Signs Low, Sending Alert In "..TimeToAlert.." Second(s)") SentNotify = true end
-					if lib.callback.await("ps-dispatch:server:PressPanicButton") then 
-						if TimeToAlert == 0 then 
-							if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
-                                TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-								exports['ps-dispatch']:OfficerDown()
-								break
-							elseif (PlayerData.job.name == "ambulance") then
-                                TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-								exports['ps-dispatch']:EMSDown()
+				if not exports["ps-dispatch"]:UsedPanicButton() and (PlayerData.job.name == "police" or PlayerData.job.name == "ambulance") then 
+					while true do 
+						Wait(1000)
+						PlayerData = QBCore.Functions.GetPlayerData()
+						if IsDowned() then
+							if TimeToAlert == 0 then return end
+							if TimeToAlert ~= 0 then TimeToAlert = TimeToAlert - 1 end
+							if lib.callback.await("ps-dispatch:server:PressPanicButton") then 
+								if not SentNotify then QBCore.Functions.Notify("Vital Signs Low, Sending Alert In "..TimeToAlert.." Second(s)") SentNotify = true end
+								if TimeToAlert == 0 then 
+									if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
+										TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+										exports['ps-dispatch']:OfficerDown()
+										break
+									elseif (PlayerData.job.name == "ambulance") then
+										TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+										exports['ps-dispatch']:EMSDown()
+										break
+									end
+								end
+							else
 								break
 							end
+						else 
+							break
 						end
-					else
-						break
 					end
-				else 
-					break
 				end
 			end
-		end
-    elseif InLaststand and not IsDead then
-        -- EndLastStand()
-        logDeath(victim, attacker, weapon)
-        DeathTime = 0
-        OnDeath()
-        AllowRespawn()
+            elseif InLaststand and not isDead then
+                SetLaststand(false)
+                local playerid = NetworkGetPlayerIndexFromPed(victim)
+                local playerName = GetPlayerName(playerid) .. " " .. "("..GetPlayerServerId(playerid)..")" or Lang:t('info.self_death')
+                local killerId = NetworkGetPlayerIndexFromPed(attacker)
+                local killerName = GetPlayerName(killerId) .. " " .. "("..GetPlayerServerId(killerId)..")" or Lang:t('info.self_death')
+                local weaponLabel = QBCore.Shared.Weapons[weapon].label or 'Unknown'
+                local weaponName = QBCore.Shared.Weapons[weapon].name or 'Unknown'
+                TriggerServerEvent("qb-log:server:CreateLog", "death", Lang:t('logs.death_log_title', {playername = playerName, playerid = GetPlayerServerId(playerid)}), "red", Lang:t('logs.death_log_message', {killername = killerName, playername = playerName, weaponlabel = weaponLabel, weaponname = weaponName}))
+                deathTime = Config.DeathTime
+                OnDeath()
+                DeathTimer()
+            end
+        end
     end
 end)
 ```
+**goto qb-ps-dispatch/server/sv_main.lua and add**
+```lua
+QBCore.Functions.CreateUseableItem("panicbutton", function(source, item)
+	TriggerClientEvent("ps-dispatch:client:TriggerPanicButton", source)
+end)
+
+lib.callback.register("ps-dispatch:server:PressPanicButton", function()
+	if next(exports.ox_inventory:Search(source, "slots", "panicbutton")) ~= nil then 
+		return true
+	else
+		return false
+	end
+end)
+```
+
+# QB Installation
+
+**goto ps-dispatch/client/cl_main.lua and add**
+
+```lua
+function IsDowned()
+	return (PlayerData.metadata["isdead"] or PlayerData.metadata["inlaststand"])
+end
+
+local PressedPanicButton = false
+RegisterNetEvent("ps-dispatch:client:TriggerPanicButton", function()
+	if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") or (PlayerData.job.name == "ambulance") then 
+		if not PressedPanicButton then 
+			QBCore.Functions.Progressbar("panic_button", "Pressing Panic Button...", 5000, false, true, {
+				disableMovement = false,
+				disableCarMovement = false,
+				disableMouse = false,
+				disableCombat = true,
+			}, {}, {}, {}, function() 
+				PressedPanicButton = true
+				PlayerData = QBCore.Functions.GetPlayerData()
+				QBCore.Functions.TriggerCallback("ps-dispatch:server:PressPanicButton", function(HasItem)
+					if HasItem then 
+						if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
+							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+							exports['ps-dispatch']:OfficerDown2()
+							PressedPanicButton = false
+						elseif (PlayerData.job.name == "ambulance") then
+							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+							exports['ps-dispatch']:EMSDown2()
+							PressedPanicButton = false
+						end
+					else
+						PressedPanicButton = false
+					end
+				end)
+			end, function()
+				QBCore.Functions.Notify("Panic Button Canceled", "error")
+			end)
+		end
+	end
+end)
+
+function UsedPanicButton()
+	return PressedPanicButton
+end exports("UsedPanicButton", UsedPanicButton)
+```
+**goto qb-ambulancejob/client/dead.lua and add**
+
+```lua
+function IsDowned()
+	return (PlayerData.metadata["isdead"] or PlayerData.metadata["inlaststand"])
+end
+
+AddEventHandler('gameEventTriggered', function(event, data)
+    if event == "CEventNetworkEntityDamage" then
+        local victim, attacker, victimDied, weapon = data[1], data[2], data[4], data[7]
+        if not IsEntityAPed(victim) then return end
+        if victimDied and NetworkGetPlayerIndexFromPed(victim) == PlayerId() and IsEntityDead(PlayerPedId()) then
+            if not InLaststand then
+                SetLaststand(true)
+				TimeToAlert = 30
+				SentNotify = false
+				SentAlert = false
+				PlayerData = QBCore.Functions.GetPlayerData()
+				if not exports["ps-dispatch"]:UsedPanicButton() and (PlayerData.job.name == "police" or PlayerData.job.name == "ambulance") then 
+				while true do 
+					Wait(1000)
+					PlayerData = QBCore.Functions.GetPlayerData()
+					if IsDowned() then
+						if TimeToAlert == 0 then return end
+						if TimeToAlert ~= 0 then TimeToAlert = TimeToAlert - 1 end
+						if SentAlert then break end
+						QBCore.Functions.TriggerCallback("ps-dispatch:server:PressPanicButton", function(HasItem)
+							if HasItem then 
+								if not SentNotify then QBCore.Functions.Notify("Vital Signs Low, Sending Alert In "..TimeToAlert.." Second(s)") SentNotify = true end
+								if TimeToAlert == 0 then 
+									if (PlayerData.job.name == "police" or PlayerData.job.type == "leo") then
+										TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+										exports['ps-dispatch']:OfficerDown()
+										SentAlert = true
+									elseif (PlayerData.job.name == "ambulance") then
+										TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
+										exports['ps-dispatch']:EMSDown()
+										SentAlert = true
+									end
+								end
+							end
+						end)
+					else 
+						break
+					end
+					if SentAlert then 
+						break
+					end
+				end
+			end
+            elseif InLaststand and not isDead then
+                SetLaststand(false)
+                local playerid = NetworkGetPlayerIndexFromPed(victim)
+                local playerName = GetPlayerName(playerid) .. " " .. "("..GetPlayerServerId(playerid)..")" or Lang:t('info.self_death')
+                local killerId = NetworkGetPlayerIndexFromPed(attacker)
+                local killerName = GetPlayerName(killerId) .. " " .. "("..GetPlayerServerId(killerId)..")" or Lang:t('info.self_death')
+                local weaponLabel = QBCore.Shared.Weapons[weapon].label or 'Unknown'
+                local weaponName = QBCore.Shared.Weapons[weapon].name or 'Unknown'
+                TriggerServerEvent("qb-log:server:CreateLog", "death", Lang:t('logs.death_log_title', {playername = playerName, playerid = GetPlayerServerId(playerid)}), "red", Lang:t('logs.death_log_message', {killername = killerName, playername = playerName, weaponlabel = weaponLabel, weaponname = weaponName}))
+                deathTime = Config.DeathTime
+                OnDeath()
+                DeathTimer()
+            end
+        end
+    end
+end)
+```
+**goto qb-ps-dispatch/server/sv_main.lua and add**
+```lua
+QBCore.Functions.CreateUseableItem("panicbutton", function(source, item)
+	TriggerClientEvent("ps-dispatch:client:TriggerPanicButton", source)
+end)
+
+QBCore.Functions.CreateCallback("ps-dispatch:server:PressPanicButton", function(source, cb)
+	local Player = QBCore.Functions.GetPlayer(source)
+	if Player.Functions.GetItemByName("panicbutton") then 
+		cb(true)
+	else
+		cb(false)
+	end
+end)
+```
+
+
+# Alert Installation
 **goto qb-core/shared/items.lua and add**
 
 ```lua
@@ -286,18 +424,4 @@ local function EmsDown2()
 end
 
 exports('EmsDown2', EmsDown2)
-```
-**goto qb-ps-dispatch/server/sv_main.lua and add**
-```lua
-QBCore.Functions.CreateUseableItem("panicbutton", function(source, item)
-	TriggerClientEvent("ps-dispatch:client:TriggerPanicButton", source)
-end)
-
-lib.callback.register("ps-dispatch:server:PressPanicButton", function()
-	if next(exports.ox_inventory:Search(source, "slots", "panicbutton")) ~= nil then 
-		return true
-	else
-		return false
-	end
-end)
 ```
