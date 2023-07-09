@@ -178,7 +178,7 @@ RegisterNetEvent("ps-dispatch:client:TriggerPanicButton", function()
 							PressedPanicButton = false
 						elseif (PlayerData.job.name == "ambulance") then
 							TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-							exports['ps-dispatch']:EMSDown2()
+							exports['ps-dispatch']:EmsDown2()
 							PressedPanicButton = false
 						end
 					else
@@ -232,7 +232,7 @@ AddEventHandler('gameEventTriggered', function(event, data)
 										SentAlert = true
 									elseif (PlayerData.job.name == "ambulance") then
 										TriggerServerEvent("InteractSound_SV:PlayWithinDistance", 7.0, "panicbutton", 7.0)
-										exports['ps-dispatch']:EMSDown()
+										exports['ps-dispatch']:EmsDown()
 										SentAlert = true
 									end
 								end
@@ -284,7 +284,8 @@ end)
 **goto qb-core/shared/items.lua and add**
 
 ```lua
-['panicbutton'] = {['name'] = 'panicbutton',['label'] = 'Panic Button',["created"] = nil, ['weight'] = 100,	['type']= 'item',['image'] = 'panicbutton.png', ['unique'] = true,	['useable']= true ['shouldClose'] =true,['combinable'] = nil,['description'] = 'Some sort of button?'},
+	['panicbutton'] 				 = {['name'] = 'panicbutton',					['label'] = 'Panic Button',				['weight'] = 100,		['type'] = 'item',		['image'] = 'panicbutton.png', 			['unique'] = true,		['useable'] = true, 	['shouldClose'] = true,	   ['combinable'] = nil,   ['description'] = 'Some sort of button?'},
+
 ```
 **ps-dispatch/server/sv_dispatchcodes.lua**
 **find ["officerdown"] and replace with**
